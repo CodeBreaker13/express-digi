@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI Crop Disease Checker — Chat + Image</title>
+    <!-- Tailwind Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .msg-max {
+        max-width: 70%;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-50 text-gray-800">
+    <div class="container mx-auto p-4">
+      <!-- Header -->
+      <header class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-2xl font-extrabold">AI Crop Disease Checker</h1>
+          <p class="text-sm text-gray-600">
+            Upload a photo, get quick disease detection & ask the crop-advisor
+            bot.
+          </p>
+        </div>
+        <div class="text-right text-xs text-gray-500">
+          No frameworks — pure HTML + Tailwind + vanilla JS
+        </div>
+      </header>
+
+      <!-- Main -->
+      <main class="grid gap-4 grid-cols-1 md:grid-cols-3">
+        <!-- Left Panel -->
+        <section class="md:col-span-1 bg-white p-4 rounded-2xl shadow">
+          <h2 class="font-semibold mb-2">Image / Quick Detect</h2>
+          <form id="imageForm" class="space-y-3">
+            <label class="block">
+              <span class="text-sm font-medium">Upload leaf / crop photo</span>
+              <input
+                id="imageInput"
+                type="file"
+                accept="image/*"
+                class="mt-2 block w-full text-sm text-gray-600"
+              />
+            </label>
+
+            <div
+              id="previewWrap"
+              class="hidden border border-dashed border-gray-200 rounded p-2"
+            >
+              <img
+                id="preview"
+                alt="preview"
+                class="w-full h-48 object-contain rounded"
+              />
+              <div class="text-xs text-gray-500 mt-2">Preview</div>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+                id="detectBtn"
+                type="button"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              >
+                Detect Disease
+              </button>
+              <button
+                id="clearBtn"
+                type="button"
+                class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div
+              id="quickResult"
+              class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-sm"
+            ></div>
+
+            <details class="mt-2 text-sm text-gray-600">
+              <summary class="cursor-pointer">How it works</summary>
+              <p class="mt-2">
+                This frontend sends the image to your backend ML endpoint
+                (<code>/api/detect</code>) which should return a diagnosis,
+                confidence and suggested remedies.
+              </p>
+            </details>
+          </form>
+
+          <div class="mt-4 text-xs text-gray-500">
+            <strong>Tip:</strong> Use clear close-up images of the affected leaf
+            or fruit.
+          </div>
+        </section>
+
+        <!-- Chat Section -->
+        <section
+          class="md:col-span-2 bg-white p-4 rounded-2xl shadow flex flex-col h-[60vh]"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-semibold">Crop Advisor Chatbot</h2>
+            <div class="text-xs text-gray-500">
+              Status: <span id="botStatus" class="text-green-600">online</span>
+            </div>
+          </div>
+
+          <div
+            id="chatWindow"
+            class="flex-1 overflow-y-auto px-2 py-3 space-y-3 bg-gradient-to-b from-white to-gray-50 rounded"
+          >
+            <div id="welcome" class="text-sm text-gray-600">
+              Hello! Upload an image and press <em>Detect Disease</em> or ask
+              the bot about crop care.
+            </div>
+          </div>
+
+          <!-- Chat Form -->
+          <form id="chatForm" class="mt-3 grid grid-cols-12 gap-2 items-end">
+            <div class="col-span-12 sm:col-span-9">
+              <textarea
+                id="userMsg"
+                rows="2"
+                placeholder="Ask the crop advisor..."
+                class="w-full resize-none rounded border px-3 py-2 text-sm"
+              ></textarea>
+            </div>
+            <div class="col-span-6 sm:col-span-2">
+              <input
+                id="chatImage"
+                type="file"
+                accept="image/*"
+                class="text-xs w-full"
+              />
+            </div>
+            <div class="col-span-6 sm:col-span-1">
+              <button
+                id="sendBtn"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded"
+              >
+                Send
+              </button>
+            </div>
+            <div class="col-span-12 text-xs text-gray-500 mt-1">
+              Quick prompts:
+              <button
+                type="button"
+                class="tag inline-block px-2 py-0.5 rounded bg-gray-100 mr-1"
+                data-prompt="What disease is this?"
+              >
+                What disease is this?
+              </button>
+              <button
+                type="button"
+                class="tag inline-block px-2 py-0.5 rounded bg-gray-100 mr-1"
+                data-prompt="Treatment steps"
+              >
+                Treatment steps
+              </button>
+              <button
+                type="button"
+                class="tag inline-block px-2 py-0.5 rounded bg-gray-100"
+                data-prompt="Preventive measures"
+              >
+                Preventive measures
+              </button>
+            </div>
+          </form>
+
+          <div class="mt-3 text-xs text-gray-500">
+            <strong>Backend hooks</strong>:
+            <ul class="list-disc list-inside ml-4">
+              <li>
+                <code>POST /api/detect</code> → {diagnosis, confidence, tips}
+              </li>
+              <li><code>POST /api/chat</code> → {reply}</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+
+      <footer class="mt-4 text-xs text-gray-500">
+        Made with ♥ — replace /api endpoints with your ML & chat backend.
+      </footer>
+    </div>
+
+    <script>
+      // --- DOM refs
+      const imageInput = document.getElementById("imageInput");
+      const previewWrap = document.getElementById("previewWrap");
+      const preview = document.getElementById("preview");
+      const detectBtn = document.getElementById("detectBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const quickResult = document.getElementById("quickResult");
+
+      const chatWindow = document.getElementById("chatWindow");
+      const chatForm = document.getElementById("chatForm");
+      const userMsg = document.getElementById("userMsg");
+      const chatImage = document.getElementById("chatImage");
+      const sendBtn = document.getElementById("sendBtn");
+
+      // Image preview
+      imageInput.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return hidePreview();
+        const url = URL.createObjectURL(f);
+        preview.src = url;
+        previewWrap.classList.remove("hidden");
+        quickResult.classList.add("hidden");
+      });
+
+      function hidePreview() {
+        preview.src = "";
+        previewWrap.classList.add("hidden");
+        imageInput.value = "";
+      }
+
+      clearBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        hidePreview();
+        quickResult.classList.add("hidden");
+      });
+
+      // Detection flow
+      detectBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const file = imageInput.files?.[0];
+        if (!file) {
+          alert("Please choose an image first.");
+          return;
+        }
+        detectBtn.disabled = true;
+        detectBtn.textContent = "Detecting...";
+
+        try {
+          const fd = new FormData();
+          fd.append("image", file);
+
+          const resp = await fetch("/api/detect", { method: "POST", body: fd });
+          if (!resp.ok) throw new Error("Detection failed: " + resp.status);
+          const data = await resp.json();
+
+          quickResult.innerHTML = `
+          <strong>Diagnosis:</strong> ${escapeHtml(
+            data.diagnosis || "Unknown"
+          )}<br>
+          <strong>Confidence:</strong> ${Math.round(
+            (data.confidence || 0) * 100
+          )}%<br>
+          <div class="mt-2 text-sm">${escapeHtml(data.tips || "")}</div>
+        `;
+          quickResult.classList.remove("hidden");
+
+          appendUserMessage("Uploaded an image for detection", true);
+          appendBotMessage(
+            `Diagnosis: ${data.diagnosis} — Confidence: ${Math.round(
+              (data.confidence || 0) * 100
+            )}%\n${data.tips || ""}`
+          );
+        } catch (err) {
+          quickResult.innerHTML = "Error: " + err.message;
+          quickResult.classList.remove("hidden");
+        } finally {
+          detectBtn.disabled = false;
+          detectBtn.textContent = "Detect Disease";
+        }
+      });
+
+      // Chat
+      chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = userMsg.value.trim();
+        const file = chatImage.files?.[0];
+        if (!text && !file) return;
+
+        if (text) appendUserMessage(text);
+        else appendUserMessage(file.name || "Image");
+
+        userMsg.value = "";
+        chatImage.value = "";
+
+        appendBotMessage("Thinking...");
+        try {
+          const payload = { message: text };
+          const resp = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!resp.ok) throw new Error("Chat failed: " + resp.status);
+          const res = await resp.json();
+          replaceLastBotMessage(res.reply || "No reply.");
+        } catch (err) {
+          replaceLastBotMessage("Error: " + err.message);
+        }
+      });
+
+      // Quick prompt buttons
+      document.querySelectorAll(".tag").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          userMsg.value = btn.dataset.prompt;
+          userMsg.focus();
+        });
+      });
+
+      // Chat helpers
+      function appendUserMessage(text, small = false) {
+        const d = document.createElement("div");
+        d.className = "flex justify-end";
+        const inner = document.createElement("div");
+        inner.className =
+          "bg-indigo-600 text-white px-3 py-2 rounded-lg msg-max";
+        if (small) inner.classList.add("text-sm", "bg-indigo-500/85");
+        inner.textContent = text;
+        d.appendChild(inner);
+        chatWindow.appendChild(d);
+        scrollChatToBottom();
+      }
+
+      function appendBotMessage(text) {
+        const d = document.createElement("div");
+        d.className = "flex justify-start";
+        const inner = document.createElement("div");
+        inner.className =
+          "bg-gray-100 text-gray-800 px-3 py-2 rounded-lg msg-max whitespace-pre-wrap";
+        inner.textContent = text;
+        d.appendChild(inner);
+        chatWindow.appendChild(d);
+        scrollChatToBottom();
+      }
+
+      function replaceLastBotMessage(text) {
+        const msgs = chatWindow.querySelectorAll("div.flex.justify-start");
+        if (msgs.length === 0) {
+          appendBotMessage(text);
+          return;
+        }
+        msgs[msgs.length - 1].firstChild.textContent = text;
+        scrollChatToBottom();
+      }
+
+      function scrollChatToBottom() {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+
+      function escapeHtml(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      // Enter-to-send
+      userMsg.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendBtn.click();
+        }
+      });
+
+      // Mock backend (for demo only)
+      (function setMock() {
+        if (
+          location.hostname === "localhost" ||
+          location.protocol === "file:"
+        ) {
+          const _fetch = window.fetch;
+          window.fetch = async function (url, opts) {
+            if (url.endsWith("/api/detect")) {
+              await new Promise((r) => setTimeout(r, 800));
+              return new Response(
+                JSON.stringify({
+                  diagnosis: "Leaf blight (simulated)",
+                  confidence: 0.86,
+                  tips: "Remove affected leaves. Use fungicide. Rotate crops.",
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } }
+              );
+            }
+            if (url.endsWith("/api/chat")) {
+              const body = opts?.body ? JSON.parse(opts.body) : {};
+              await new Promise((r) => setTimeout(r, 700));
+              return new Response(
+                JSON.stringify({
+                  reply: `Simulated bot reply to: "${
+                    body.message || ""
+                  }"\n\nAdvice: Keep humidity low, avoid overhead watering.`,
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } }
+              );
+            }
+            return _fetch.apply(this, arguments);
+          };
+        }
+      })();
+    </script>
+  </body>
+</html>
